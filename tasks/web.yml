@@ -1,0 +1,82 @@
+---
+- name: web - Fetch source code
+  git:
+    repo: https://github.com/graphite-project/graphite-web.git
+    dest: '{{ graphite_src_web }}'
+    version: '{{ graphite_version }}'
+
+- name: web - Installing dependencies (PIP)
+  pip:
+    virtualenv: '{{ graphite_env_location }}'
+    requirements: '{{ graphite_src_web }}/requirements.txt'
+
+- name: web - Installing
+  command: '{{ graphite_env_location }}/bin/python setup.py install --prefix={{ graphite_location }} --install-lib={{ graphite_location }}/webapp'
+  args:
+    chdir: '{{ graphite_src_web }}'
+
+- name: carbon - Move all example configuration files to created directory
+  shell: 'mv {{ graphite_location }}/conf/*.example {{ graphite_location }}/conf/example/'
+
+- name: web - Coping local_settings.py
+  template:
+    src: local_settings.py.j2
+    dest: '{{ graphite_location }}/webapp/graphite/local_settings.py'
+    owner: root
+    group: root
+    mode: 0644
+  register: web_update_confs
+
+- name: web - Django syncDB
+  django_manage:
+    command: syncdb
+    virtualenv: '{{ graphite_env_location }}'
+    app_path: '{{ graphite_location }}/webapp/graphite'
+
+- name: web - Coping WSGI script
+  command: 'cp {{ graphite_location }}/conf/example/graphite.wsgi.example {{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
+  args:
+    creates: '{{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
+
+- name: web - Update graphite_wsgi.py
+  lineinfile:
+    dest: '{{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
+    regexp: "sys.path.append"
+    state: absent
+
+- name: web - Insert
+  lineinfile:
+    dest: '{{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
+    insertafter: 'import os, sys'
+    line: "sys.path.append('{{ graphite_location }}/webapp')"
+
+- name: web - Coping configuration file Supervisor
+  template:
+    src: 'supervisor-web.conf.j2'
+    dest: '/etc/supervisor/conf.d/graphite-web.conf'
+    owner: root
+    group: root
+    mode: 0644
+  register: web_update_conf_supervisor
+
+- name: web - Initial at Supervisor
+  supervisorctl:
+    name: graphite-web
+    state: present
+  register: web_add_new_service
+
+- name: web - Restart Web
+  supervisorctl:
+    name: graphite-web
+    state: restarted
+    config: /etc/supervisor/supervisord.conf
+  when: (web_update_confs.changed or web_update_conf_supervisor.changed) and web_add_new_service.changed == false
+
+- name: web - Coping configuration file for nginx
+  template:
+    src: nginx-web.conf.j2
+    dest: /etc/nginx/conf.d/graphite.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart nginx

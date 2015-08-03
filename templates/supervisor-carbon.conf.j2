@@ -1,0 +1,7 @@
+[program:graphite-carbon]
+command = {{ graphite_location }}/bin/carbon-cache.py start --nodaemon
+stdout_logfile = /var/log/supervisor/graphite-carbon-out.log
+stderr_logfile = /var/log/supervisor/graphite-carbon-err.log
+autostart = true
+autorestart = true
+redirect_stderr = true

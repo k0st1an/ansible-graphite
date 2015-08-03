@@ -1,0 +1,6 @@
+---
+- name: Deploy Graphite
+  hosts: carbon
+  remote_user: root
+  roles:
+    - k0st1an.graphite

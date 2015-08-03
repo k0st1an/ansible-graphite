@@ -1,0 +1,6 @@
+---
+# handlers file for k0st1an.carbon/
+- name: restart nginx
+  service:
+    name: nginx
+    state: restarted

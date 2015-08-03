@@ -1,0 +1,22 @@
+---
+
+graphite_version            : '0.9.13-pre1'
+graphite_location           : '/srv/graphite'
+graphite_src_carbon         : '{{ graphite_location }}/src/carbon'
+graphite_src_web            : '{{ graphite_location }}/src/web'
+graphite_env_location       : '{{ graphite_location }}/env'
+
+graphite_carbon_confs       :
+  - carbon.conf
+  - storage-schemas.conf
+  - storage-aggregation.conf
+
+graphite_supervisor_confs   :
+  - supervisor-carbon.conf
+  - supervisor-web.conf
+
+graphite_web_address        : '127.0.0.1'
+graphite_web_port           : '8000'
+graphite_gunicorn_workers   : '2'
+
+graphite_nginx_dns          : 'graphite.com'

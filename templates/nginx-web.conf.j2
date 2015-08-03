@@ -1,0 +1,20 @@
+upstream backend {
+  server {{ graphite_web_address }}:{{ graphite_web_port }};
+}
+
+server {
+  listen        80;
+  server_name   {{ graphite_nginx_dns }};
+  charset       utf-8;
+  access_log    /var/log/nginx/graphite_access.log;
+  error_log     /var/log/nginx/graphite_error.log;
+
+  location /static/ {
+    alias       {{ graphite_location }}/webapp/content/;
+  }
+
+  location / {
+    proxy_pass  http://backend;
+    include     /etc/nginx/uwsgi_params;
+  }
+}

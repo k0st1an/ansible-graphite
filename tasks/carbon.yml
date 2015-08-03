@@ -1,0 +1,51 @@
+---
+- name: carbon - Fetch source code
+  git:
+    repo: https://github.com/graphite-project/carbon.git
+    dest: '{{ graphite_src_carbon }}'
+    version: '{{ graphite_version }}'
+
+- name: carbon - Installing dependencies (Virtualenv)
+  pip:
+    virtualenv: '{{ graphite_env_location }}'
+    requirements: '{{ graphite_src_carbon }}/requirements.txt'
+
+- name: carbon - Installing
+  command: '{{ graphite_env_location }}/bin/python setup.py install --prefix={{ graphite_location }} --install-lib={{ graphite_location }}/lib'
+  args:
+    chdir: '{{ graphite_src_carbon }}'
+
+- name: carbon - Move all example configuration files to created directory
+  shell: 'mv {{ graphite_location }}/conf/*.example {{ graphite_location }}/conf/example/'
+
+- name: carbon - Coping configuration files
+  template:
+    src: '{{ item }}.j2'
+    dest: '{{ graphite_location }}/conf/{{ item }}'
+    owner: root
+    group: root
+    mode: 0644
+  with_items: '{{ graphite_carbon_confs }}'
+  register: carbon_update_confs
+
+- name: carbon - Coping configuration file Supervisor
+  template:
+    src: 'supervisor-carbon.conf.j2'
+    dest: '/etc/supervisor/conf.d/graphite-carbon.conf'
+    owner: root
+    group: root
+    mode: 0644
+  register: carbon_update_conf_supervisor
+
+- name: carbon - Initial at Supervisor
+  supervisorctl:
+    name: graphite-carbon
+    state: present
+  register: carbon_add_new_service
+
+- name: carbon - Restart Carbon
+  supervisorctl:
+    name: graphite-carbon
+    state: restarted
+    config: /etc/supervisor/supervisord.conf
+  when: (carbon_update_confs.changed or carbon_update_conf_supervisor.changed) and carbon_add_new_service.changed == false
