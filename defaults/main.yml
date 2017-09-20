@@ -1,14 +1,10 @@
 ---
 graphite_version:           '1.0.2'
-graphite_location:          '/opt/graphite'
-graphite_src_carbon:        '{{ graphite_location }}/src/carbon'
-graphite_src_web:           '{{ graphite_location }}/src/web'
-graphite_env_location:      '{{ graphite_location }}/env'
-
-graphite_carbon_confs:
-  - carbon.conf
-  - storage-schemas.conf
-  - storage-aggregation.conf
+graphite_lib:               /opt/graphite
+graphite_src:               '{{ graphite_lib }}/src'
+graphite_src_carbon:        '{{ graphite_src }}/carbon'
+graphite_src_web:           '{{ graphite_src }}/web'
+graphite_venv:              '{{ graphite_lib }}/.venv'
 
 graphite_supervisor_confs:
   - supervisor-carbon.conf

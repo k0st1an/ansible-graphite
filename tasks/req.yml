@@ -1,0 +1,14 @@
+---
+- name: Installing dependencies
+  apt:
+    cache_valid_time: 3600
+    name: '{{ item }}'
+  with_items:
+    - python2.7
+    - python2.7-dev
+    - libffi-dev
+    - build-essential
+    - git-core
+    - supervisor
+    - virtualenv
+    - fontconfig

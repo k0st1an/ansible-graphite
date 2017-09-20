@@ -4,3 +4,8 @@
   service:
     name: nginx
     state: restarted
+
+- name: restart carbon
+  supervisorctl:
+    name: graphite-carbon
+    state: restarted

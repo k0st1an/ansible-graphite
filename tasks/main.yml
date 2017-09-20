@@ -1,12 +1,12 @@
 ---
-- include: common.yml
-  tags:
-    - common
-    - carbon
-    - web
+- name: Create directory
+  file:
+    dest: '{{ graphite_lib }}'
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
 
+- include: req.yml
 - include: carbon.yml
-  tags: carbon
-
-- include: web.yml
-  tags: web
+# - include: web.yml

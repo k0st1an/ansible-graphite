@@ -1,51 +1,45 @@
 ---
-- name: carbon - Fetch source code
+- name: Fetch source code - Carbon
   git:
     repo: https://github.com/graphite-project/carbon.git
     dest: '{{ graphite_src_carbon }}'
     version: '{{ graphite_version }}'
 
-- name: carbon - Installing dependencies (Virtualenv)
+- name: Create venv
   pip:
-    virtualenv: '{{ graphite_env_location }}'
+    virtualenv: '{{ graphite_venv }}'
     requirements: '{{ graphite_src_carbon }}/requirements.txt'
+    virtualenv_python: python2.7
 
-- name: carbon - Installing
-  command: '{{ graphite_env_location }}/bin/python setup.py install --prefix={{ graphite_location }} --install-lib={{ graphite_location }}/lib'
+- name: Installing Carbon
+  command: '{{ graphite_venv }}/bin/python setup.py install'
   args:
     chdir: '{{ graphite_src_carbon }}'
+    creates: '{{ graphite_lib }}/bin/carbon-cache.py'
 
-- name: carbon - Move all example configuration files to created directory
-  shell: 'mv {{ graphite_location }}/conf/*.example {{ graphite_location }}/conf/example/'
-
-- name: carbon - Coping configuration files
+- name: Update are configuration files
   template:
-    src: '{{ item }}.j2'
-    dest: '{{ graphite_location }}/conf/{{ item }}'
+    src: '{{ item }}'
+    dest: '{{ graphite_lib }}/conf/{{ item | basename }}'
     owner: root
     group: root
     mode: 0644
-  with_items: '{{ graphite_carbon_confs }}'
-  register: carbon_update_confs
+  with_items:
+    - carbon/carbon.conf
+    - carbon/storage-schemas.conf
+    - carbon/storage-aggregation.conf
+  notify: restart carbon
 
-- name: carbon - Coping configuration file Supervisor
+- name: Update configuration file Supervisor
   template:
-    src: 'supervisor-carbon.conf.j2'
+    src: 'carbon/supervisor.conf'
     dest: '/etc/supervisor/conf.d/graphite-carbon.conf'
     owner: root
     group: root
     mode: 0644
-  register: carbon_update_conf_supervisor
+  notify: restart carbon
 
-- name: carbon - Initial at Supervisor
+- name: Initial at Supervisor
   supervisorctl:
     name: graphite-carbon
     state: present
-  register: carbon_add_new_service
-
-- name: carbon - Restart Carbon
-  supervisorctl:
-    name: graphite-carbon
-    state: restarted
-    config: /etc/supervisor/supervisord.conf
-  when: (carbon_update_confs.changed or carbon_update_conf_supervisor.changed) and carbon_add_new_service.changed == false
