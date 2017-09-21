@@ -18,6 +18,7 @@
     creates: '{{ graphite_lib }}/bin/carbon-cache.py'
 
 - name: Update are configuration files
+  tags: graphite-cabon-conf
   template:
     src: '{{ item }}'
     dest: '{{ graphite_lib }}/conf/{{ item | basename }}'
@@ -28,9 +29,11 @@
     - carbon/carbon.conf
     - carbon/storage-schemas.conf
     - carbon/storage-aggregation.conf
+    - carbon/aggregation-rules.conf
   notify: restart carbon
 
 - name: Update configuration file Supervisor
+  tags: graphite-cabon-conf
   template:
     src: 'carbon/supervisor.conf'
     dest: '/etc/supervisor/conf.d/graphite-carbon.conf'
