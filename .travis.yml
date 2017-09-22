@@ -17,8 +17,8 @@ addons:
     - python-apt
 
 install:
-  # Install ansible
   - pip install ansible
+  - pip install vertialenv
 
   # Check ansible version
   - ansible --version
