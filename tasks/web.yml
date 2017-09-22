@@ -1,82 +1,65 @@
 ---
-- name: web - Fetch source code
+- name: Create user
+  user:
+    name: '{{ graphite_web_user }}'
+    system: yes
+    createhome: no
+
+- name: Fetch source code - Web
   git:
     repo: https://github.com/graphite-project/graphite-web.git
     dest: '{{ graphite_src_web }}'
     version: '{{ graphite_version }}'
 
-- name: web - Installing dependencies (PIP)
+- name: Create venv
   pip:
-    virtualenv: '{{ graphite_env_location }}'
+    virtualenv: '{{ graphite_venv }}'
     requirements: '{{ graphite_src_web }}/requirements.txt'
 
-- name: web - Installing
-  command: '{{ graphite_env_location }}/bin/python setup.py install --prefix={{ graphite_location }} --install-lib={{ graphite_location }}/webapp'
+- name: Installing Web
+  command: '{{ graphite_venv }}/bin/python setup.py install'
   args:
     chdir: '{{ graphite_src_web }}'
 
-- name: carbon - Move all example configuration files to created directory
-  shell: 'mv {{ graphite_location }}/conf/*.example {{ graphite_location }}/conf/example/'
+- name: Create directory for sqlite db
+  file:
+    path: '{{ graphite_lib }}/storage/webapp'
+    state: directory
+    owner: '{{ graphite_web_user }}'
+    group: '{{ graphite_web_user }}'
+    mode: 0755
 
-- name: web - Coping local_settings.py
+- name: Update config local_settings.py
+  tags: graphite-web-conf
   template:
-    src: local_settings.py.j2
-    dest: '{{ graphite_location }}/webapp/graphite/local_settings.py'
+    src: web/local_settings.py
+    dest: '{{ graphite_lib }}/webapp/graphite/local_settings.py'
     owner: root
     group: root
     mode: 0644
-  register: web_update_confs
 
-- name: web - Django syncDB
-  django_manage:
-    command: syncdb
-    virtualenv: '{{ graphite_env_location }}'
-    app_path: '{{ graphite_location }}/webapp/graphite'
-
-- name: web - Coping WSGI script
-  command: 'cp {{ graphite_location }}/conf/example/graphite.wsgi.example {{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
+- name: Initial new DB
+  shell: PYTHONPATH={{ graphite_lib }}/webapp {{ graphite_venv }}/bin/django-admin.py migrate --settings=graphite.settings --run-syncdb
   args:
-    creates: '{{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
+    chdir: '{{ graphite_lib }}/webapp'
+    creates: '{{ graphite_lib }}/storage/graphite.db'
 
-- name: web - Update graphite_wsgi.py
-  lineinfile:
-    dest: '{{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
-    regexp: "sys.path.append"
-    state: absent
+- name: Check permission - directory
+  command: 'chown {{ graphite_web_user }}:{{ graphite_web_user }} -R {{ item }}'
+  with_items:
+    - '{{ graphite_lib }}/storage/webapp'
+    - '{{ graphite_lib }}/storage/log/webapp'
 
-- name: web - Insert
-  lineinfile:
-    dest: '{{ graphite_location }}/webapp/graphite/graphite_wsgi.py'
-    insertafter: 'import os, sys'
-    line: "sys.path.append('{{ graphite_location }}/webapp')"
-
-- name: web - Coping configuration file Supervisor
+- name: Update configuration file Supervisor - web
+  tags: graphite-web-conf
   template:
-    src: 'supervisor-web.conf.j2'
-    dest: '/etc/supervisor/conf.d/graphite-web.conf'
+    src: web/supervisor.conf
+    dest: /etc/supervisor/conf.d/graphite-web.conf
     owner: root
     group: root
     mode: 0644
-  register: web_update_conf_supervisor
 
 - name: web - Initial at Supervisor
   supervisorctl:
     name: graphite-web
     state: present
-  register: web_add_new_service
-
-- name: web - Restart Web
-  supervisorctl:
-    name: graphite-web
-    state: restarted
-    config: /etc/supervisor/supervisord.conf
-  when: (web_update_confs.changed or web_update_conf_supervisor.changed) and web_add_new_service.changed == false
-
-- name: web - Coping configuration file for nginx
-  template:
-    src: nginx-web.conf.j2
-    dest: /etc/nginx/conf.d/graphite.conf
-    owner: root
-    group: root
-    mode: 0644
-  notify: restart nginx

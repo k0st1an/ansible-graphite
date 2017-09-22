@@ -9,4 +9,4 @@
 
 - include: req.yml
 - include: carbon.yml
-# - include: web.yml
+- include: web.yml

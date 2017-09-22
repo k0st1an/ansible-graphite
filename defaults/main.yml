@@ -1,16 +1,14 @@
 ---
-graphite_version:           '1.0.2'
+graphite_version:           1.0.2
 graphite_lib:               /opt/graphite
 graphite_src:               '{{ graphite_lib }}/src'
 graphite_src_carbon:        '{{ graphite_src }}/carbon'
 graphite_src_web:           '{{ graphite_src }}/web'
 graphite_venv:              '{{ graphite_lib }}/.venv'
 
-graphite_supervisor_confs:
-  - supervisor-carbon.conf
-  - supervisor-web.conf
+graphite_web_user:          gweb
+graphite_bind_addr:         192.168.56.102:8000
+graphite_gunicorn_workers:  2
 
-graphite_web_address:       '127.0.0.1'
-graphite_web_port:          '8000'
-graphite_gunicorn_workers:  '2'
-graphite_nginx_dns:         'graphite.com'
+graphite_django_secret:     7c516c4d3472856a1b65713960177027
+graphite_time_zone:         UTC
