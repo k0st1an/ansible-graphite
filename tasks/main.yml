@@ -7,6 +7,6 @@
     group: root
     mode: 0755
 
-- include: req.yml
-- include: carbon.yml
-- include: web.yml
+- import_tasks: req.yml
+- import_tasks: carbon.yml
+- import_tasks: web.yml
